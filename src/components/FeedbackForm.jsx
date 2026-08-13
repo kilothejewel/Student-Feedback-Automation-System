@@ -15,6 +15,15 @@ export default function FeedbackForm() {
   const [submitStatus, setSubmitStatus] = useState('idle'); // 'idle' | 'success' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
 
+  // 2b. Webhook Settings State
+  const [webhookUrl, setWebhookUrl] = useState(() => {
+    const savedUrl = localStorage.getItem('n8n_webhook_url');
+    return savedUrl || import.meta.env.VITE_N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/test-webhook-url';
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [tempWebhookUrl, setTempWebhookUrl] = useState(webhookUrl);
+  const [settingsSuccess, setSettingsSuccess] = useState(false);
+
   // 3. Client-Side Validation Logic
   const validateForm = () => {
     const newErrors = {};
@@ -51,6 +60,24 @@ export default function FeedbackForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // 3b. Webhook settings save handler
+  const handleSaveSettings = (e) => {
+    e.preventDefault();
+    localStorage.setItem('n8n_webhook_url', tempWebhookUrl.trim());
+    setWebhookUrl(tempWebhookUrl.trim());
+    setSettingsSuccess(true);
+    setTimeout(() => setSettingsSuccess(false), 3000);
+  };
+
+  const handleResetSettings = () => {
+    const defaultUrl = import.meta.env.VITE_N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/test-webhook-url';
+    localStorage.removeItem('n8n_webhook_url');
+    setWebhookUrl(defaultUrl);
+    setTempWebhookUrl(defaultUrl);
+    setSettingsSuccess(true);
+    setTimeout(() => setSettingsSuccess(false), 3000);
+  };
+
   // 4. Form Submission Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,9 +97,6 @@ export default function FeedbackForm() {
       message: message.trim(),
       submittedAt: new Date().toISOString()
     };
-
-    // Grab the webhook URL from environment variables
-    const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL;
 
     try {
       const response = await fetch(webhookUrl, {
@@ -107,12 +131,64 @@ export default function FeedbackForm() {
 
   return (
     <div className="feedback-card">
-      <div className="feedback-header">
+      <div className="feedback-header" style={{ position: 'relative' }}>
+        <button
+          type="button"
+          className="settings-toggle-btn"
+          onClick={() => setShowSettings(!showSettings)}
+          aria-label="Toggle Webhook Settings"
+          title="Configure Webhook Destination"
+        >
+          <svg viewBox="0 0 24 24" className={`settings-cog-icon ${showSettings ? 'is-active' : ''}`}>
+            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+          </svg>
+        </button>
         <h1 className="feedback-title">Share Your Experience</h1>
         <p className="feedback-subtitle">
           Your feedback goes directly into our automated pipeline to help us improve our courses.
         </p>
       </div>
+
+      {/* Dynamic Webhook Settings Panel */}
+      {showSettings && (
+        <div className="settings-panel">
+          <h3 className="settings-panel-title">Developer Settings</h3>
+          <p className="settings-panel-subtitle">
+            Configure the destination webhook URL for testing. This setting is persisted locally in your browser.
+          </p>
+          <form onSubmit={handleSaveSettings}>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" htmlFor="webhookUrlInput">
+                <span>n8n Webhook URL</span>
+              </label>
+              <input
+                id="webhookUrlInput"
+                type="url"
+                className="form-input settings-input"
+                value={tempWebhookUrl}
+                onChange={(e) => setTempWebhookUrl(e.target.value)}
+                placeholder="http://localhost:5678/webhook/..."
+                required
+              />
+            </div>
+            
+            <div className="settings-actions">
+              <button type="submit" className="settings-btn save-btn">
+                Save Webhook
+              </button>
+              <button type="button" className="settings-btn reset-btn" onClick={handleResetSettings}>
+                Reset to Default
+              </button>
+            </div>
+          </form>
+
+          {settingsSuccess && (
+            <div className="settings-success-alert">
+              ✓ Settings saved successfully!
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Submission status alerts */}
       {submitStatus === 'success' && (
