@@ -1,0 +1,331 @@
+{
+  "name": "Student Feedback Automation System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "student-feedback",
+        "responseMode": "responseNodeRedirectAndResponse",
+        "responseData": "allEntries",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "e0e22709-b68a-4934-8c6f-ff842a220556",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "all": [
+            {
+              "value1": "={{ $json.body.studentName }}",
+              "value2": "",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json.body.email }}",
+              "value2": "",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json.body.courseName }}",
+              "value2": "",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json.body.rating }}",
+              "value2": "",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json.body.message }}",
+              "value2": "",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "2b6b0b74-1290-4822-ba3a-b85521b34e56",
+      "name": "Validate Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "all": [
+            {
+              "value1": "={{ $json.body.rating }}",
+              "value2": 2,
+              "operation": "smallerEqual"
+            }
+          ]
+        }
+      },
+      "id": "8f8b89d5-6b45-424a-a2ef-66e857418721",
+      "name": "Is Rating <= 2?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": false,
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "🚨 Needs Attention"
+            },
+            {
+              "name": "studentName",
+              "value": "={{ $json.body.studentName }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.body.email }}"
+            },
+            {
+              "name": "courseName",
+              "value": "={{ $json.body.courseName }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.body.message }}"
+            },
+            {
+              "name": "submittedAt",
+              "value": "={{ $json.body.submittedAt }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "rating",
+              "value": "={{ $json.body.rating }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "76495df0-a7d5-455b-bf50-e10db74d7522",
+      "name": "Tag: 🚨 Needs Attention",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        760,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": false,
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "✅ Satisfactory"
+            },
+            {
+              "name": "studentName",
+              "value": "={{ $json.body.studentName }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.body.email }}"
+            },
+            {
+              "name": "courseName",
+              "value": "={{ $json.body.courseName }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.body.message }}"
+            },
+            {
+              "name": "submittedAt",
+              "value": "={{ $json.body.submittedAt }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "rating",
+              "value": "={{ $json.body.rating }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "76495df0-a7d5-455b-bf50-e10db74d7523",
+      "name": "Tag: ✅ Satisfactory",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        760,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendRow",
+        "sheetId": "ENTER_YOUR_SPREADSHEET_ID_HERE",
+        "range": "Sheet1!A:G",
+        "options": {}
+      },
+      "id": "31b12480-1a1a-4299-bb0d-e25a815a5101",
+      "name": "Google Sheets Store",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "ENTER_YOUR_DISCORD_WEBHOOK_URL_HERE",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=:rocket: **New Student Feedback Received!**\n\n**Name:** {{ $json.studentName }}\n**Email:** {{ $json.email }}\n**Course:** {{ $json.courseName }}\n**Rating:** {{ $json.rating }}/5 stars\n**Status:** {{ $json.status }}\n**Message:** {{ $json.message }}\n\n*Thank you for your feedback! Your response has been received successfully.*"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "51bc5e8a-e99c-4934-bf9e-8c6f1a2a4b88",
+      "name": "Send Discord Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpCode": "400",
+        "responseBody": "{\n  \"status\": \"error\",\n  \"message\": \"Validation failed. Missing required fields.\"\n}"
+      },
+      "id": "2b6b0b74-1290-4822-ba3a-b85521b34e57",
+      "name": "Invalid Payload Response",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        540,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Data": {
+      "main": [
+        [
+          {
+            "node": "Is Rating <= 2?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Payload Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Rating <= 2?": {
+      "main": [
+        [
+          {
+            "node": "Tag: 🚨 Needs Attention",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag: ✅ Satisfactory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag: 🚨 Needs Attention": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag: ✅ Satisfactory": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Store": {
+      "main": [
+        [
+          {
+            "node": "Send Discord Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "f90df2fa-eb0d-4001-8b2b-586b2e1a2f1b"
+}
