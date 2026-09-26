@@ -1,245 +1,262 @@
 {
-  "name": "Student Feedback Automation System",
+  "name": "Student Feedback Automation Workflow",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "student-feedback",
-        "responseMode": "responseNodeRedirectAndResponse",
-        "responseData": "allEntries",
+        "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "*"
         }
       },
-      "id": "e0e22709-b68a-4934-8c6f-ff842a220556",
+      "id": "webhook-trigger",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
+      "typeVersion": 1.1,
       "position": [
-        100,
-        300
+        250,
+        360
       ]
     },
     {
       "parameters": {
         "conditions": {
-          "all": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.body.studentName }}",
-              "value2": "",
-              "operation": "isNotEmpty"
+              "id": "v1",
+              "leftValue": "={{ $json.studentName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
             },
             {
-              "value1": "={{ $json.body.email }}",
-              "value2": "",
-              "operation": "isNotEmpty"
+              "id": "v2",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
             },
             {
-              "value1": "={{ $json.body.courseName }}",
-              "value2": "",
-              "operation": "isNotEmpty"
+              "id": "v3",
+              "leftValue": "={{ $json.courseName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
             },
             {
-              "value1": "={{ $json.body.rating }}",
-              "value2": "",
-              "operation": "isNotEmpty"
+              "id": "v4",
+              "leftValue": "={{ $json.rating }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
             },
             {
-              "value1": "={{ $json.body.message }}",
-              "value2": "",
-              "operation": "isNotEmpty"
-            }
-          ]
-        }
-      },
-      "id": "2b6b0b74-1290-4822-ba3a-b85521b34e56",
-      "name": "Validate Data",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        320,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "all": [
-            {
-              "value1": "={{ $json.body.rating }}",
-              "value2": 2,
-              "operation": "smallerEqual"
-            }
-          ]
-        }
-      },
-      "id": "8f8b89d5-6b45-424a-a2ef-66e857418721",
-      "name": "Is Rating <= 2?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        540,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "keepOnlySet": false,
-        "values": {
-          "string": [
-            {
-              "name": "status",
-              "value": "🚨 Needs Attention"
-            },
-            {
-              "name": "studentName",
-              "value": "={{ $json.body.studentName }}"
-            },
-            {
-              "name": "email",
-              "value": "={{ $json.body.email }}"
-            },
-            {
-              "name": "courseName",
-              "value": "={{ $json.body.courseName }}"
-            },
-            {
-              "name": "message",
-              "value": "={{ $json.body.message }}"
-            },
-            {
-              "name": "submittedAt",
-              "value": "={{ $json.body.submittedAt }}"
+              "id": "v5",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
             }
           ],
-          "number": [
-            {
-              "name": "rating",
-              "value": "={{ $json.body.rating }}"
-            }
-          ]
+          "combinator": "and"
         },
         "options": {}
       },
-      "id": "76495df0-a7d5-455b-bf50-e10db74d7522",
-      "name": "Tag: 🚨 Needs Attention",
-      "type": "n8n-nodes-base.set",
+      "id": "validate-payload",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        470,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "{\"status\": \"error\", \"message\": \"Validation failed: Missing required fields.\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "error-response",
+      "name": "Error Response (400)",
+      "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        760,
+        680,
         180
       ]
     },
     {
       "parameters": {
-        "keepOnlySet": false,
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.rating }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "lessOrEqual"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-rating",
+      "name": "Is Rating <= 2?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        470
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "🚨 Needs Attention"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-warning",
+      "name": "Tag: Needs Attention",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        900,
+        380
+      ]
+    },
+    {
+      "parameters": {
         "values": {
           "string": [
             {
               "name": "status",
               "value": "✅ Satisfactory"
-            },
-            {
-              "name": "studentName",
-              "value": "={{ $json.body.studentName }}"
-            },
-            {
-              "name": "email",
-              "value": "={{ $json.body.email }}"
-            },
-            {
-              "name": "courseName",
-              "value": "={{ $json.body.courseName }}"
-            },
-            {
-              "name": "message",
-              "value": "={{ $json.body.message }}"
-            },
-            {
-              "name": "submittedAt",
-              "value": "={{ $json.body.submittedAt }}"
-            }
-          ],
-          "number": [
-            {
-              "name": "rating",
-              "value": "={{ $json.body.rating }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "76495df0-a7d5-455b-bf50-e10db74d7523",
-      "name": "Tag: ✅ Satisfactory",
+      "id": "set-satisfied",
+      "name": "Tag: Satisfactory",
       "type": "n8n-nodes-base.set",
       "typeVersion": 1,
       "position": [
-        760,
-        420
+        900,
+        560
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "merge-branches",
+      "name": "Merge Paths",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        470
       ]
     },
     {
       "parameters": {
-        "operation": "appendRow",
-        "sheetId": "ENTER_YOUR_SPREADSHEET_ID_HERE",
-        "range": "Sheet1!A:G",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "studentName": "={{ $json.studentName }}",
+            "email": "={{ $json.email }}",
+            "courseName": "={{ $json.courseName }}",
+            "rating": "={{ $json.rating }}",
+            "status": "={{ $json.status }}",
+            "message": "={{ $json.message }}",
+            "submittedAt": "={{ $json.submittedAt }}"
+          },
+          "matchingColumns": []
+        },
         "options": {}
       },
-      "id": "31b12480-1a1a-4299-bb0d-e25a815a5101",
-      "name": "Google Sheets Store",
+      "id": "google-sheets",
+      "name": "Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 1,
+      "typeVersion": 4.1,
       "position": [
-        980,
-        300
+        1300,
+        470
       ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "ENTER_YOUR_DISCORD_WEBHOOK_URL_HERE",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "content",
-              "value": "=:rocket: **New Student Feedback Received!**\n\n**Name:** {{ $json.studentName }}\n**Email:** {{ $json.email }}\n**Course:** {{ $json.courseName }}\n**Rating:** {{ $json.rating }}/5 stars\n**Status:** {{ $json.status }}\n**Message:** {{ $json.message }}\n\n*Thank you for your feedback! Your response has been received successfully.*"
-            }
-          ]
-        },
+        "sendTo": "={{ $json.email }}",
+        "subject": "Thank you for your feedback!",
+        "message": "Hi {{ $json.studentName }},\n\nThank you for sharing your experience in our course \"{{ $json.courseName }}\".\n\nWe have successfully received your feedback message:\n\"{{ $json.message }}\"\n\nWe recorded your rating of {{ $json.rating }}/5 stars. Feedback like yours helps us continuously improve our curriculum.\n\nBest regards,\nThe Training Team",
         "options": {}
       },
-      "id": "51bc5e8a-e99c-4934-bf9e-8c6f1a2a4b88",
-      "name": "Send Discord Notification",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
+      "id": "send-email",
+      "name": "Send Thank You Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
       "position": [
-        1200,
-        300
+        1500,
+        470
       ]
     },
     {
       "parameters": {
-        "httpCode": "400",
-        "responseBody": "{\n  \"status\": \"error\",\n  \"message\": \"Validation failed. Missing required fields.\"\n}"
+        "respondWith": "text",
+        "responseBody": "{\"status\": \"success\", \"message\": \"Feedback recorded and email notification sent.\"}",
+        "options": {
+          "responseCode": 200
+        }
       },
-      "id": "2b6b0b74-1290-4822-ba3a-b85521b34e57",
-      "name": "Invalid Payload Response",
-      "type": "n8n-nodes-base.webhook",
+      "id": "success-response",
+      "name": "Success Response (200)",
+      "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        540,
-        500
+        1700,
+        470
       ]
     }
   ],
@@ -248,14 +265,14 @@
       "main": [
         [
           {
-            "node": "Validate Data",
+            "node": "Validate Input",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Validate Data": {
+    "Validate Input": {
       "main": [
         [
           {
@@ -266,7 +283,7 @@
         ],
         [
           {
-            "node": "Invalid Payload Response",
+            "node": "Error Response (400)",
             "type": "main",
             "index": 0
           }
@@ -277,47 +294,69 @@
       "main": [
         [
           {
-            "node": "Tag: 🚨 Needs Attention",
+            "node": "Tag: Needs Attention",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Tag: ✅ Satisfactory",
+            "node": "Tag: Satisfactory",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tag: 🚨 Needs Attention": {
+    "Tag: Needs Attention": {
       "main": [
         [
           {
-            "node": "Google Sheets Store",
+            "node": "Merge Paths",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tag: ✅ Satisfactory": {
+    "Tag: Satisfactory": {
       "main": [
         [
           {
-            "node": "Google Sheets Store",
+            "node": "Merge Paths",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Paths": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google Sheets Store": {
+    "Google Sheets": {
       "main": [
         [
           {
-            "node": "Send Discord Notification",
+            "node": "Send Thank You Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Thank You Email": {
+      "main": [
+        [
+          {
+            "node": "Success Response (200)",
             "type": "main",
             "index": 0
           }
@@ -326,6 +365,9 @@
     }
   },
   "active": false,
-  "settings": {},
-  "versionId": "f90df2fa-eb0d-4001-8b2b-586b2e1a2f1b"
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f90df2fa-e16e-44db-b271-9c88461fbfd2",
+  "id": "feedback-workflow"
 }
