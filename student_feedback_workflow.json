@@ -3,6 +3,71 @@
   "nodes": [
     {
       "parameters": {
+        "content": "## 1. Receive\nThe React form POSTs JSON here.\nThe fields arrive under `$json.body`.",
+        "height": 280,
+        "width": 220,
+        "color": 7
+      },
+      "id": "note-receive",
+      "name": "Note: Receive",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-60, 180]
+    },
+    {
+      "parameters": {
+        "content": "## 2. Validate\nAll 5 fields present, email looks valid, rating is 1-5.\nIf not: reply 400 and stop.",
+        "height": 340,
+        "width": 420,
+        "color": 7
+      },
+      "id": "note-validate",
+      "name": "Note: Validate",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "content": "## 3. Classify\nRating <= 2 -> Needs Attention\nRating > 2 -> Satisfactory",
+        "height": 400,
+        "width": 440,
+        "color": 7
+      },
+      "id": "note-classify",
+      "name": "Note: Classify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+        "content": "## 4. Store\nAppend a row to Google Sheets.",
+        "height": 280,
+        "width": 220,
+        "color": 7
+      },
+      "id": "note-store",
+      "name": "Note: Store",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [860, 420]
+    },
+    {
+      "parameters": {
+        "content": "## 5. Notify & respond\nEmail the student a thank-you, then reply 200 so the form shows success.",
+        "height": 280,
+        "width": 440,
+        "color": 7
+      },
+      "id": "note-notify",
+      "name": "Note: Notify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1100, 420]
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "student-feedback",
         "responseMode": "responseNode",
@@ -14,10 +79,8 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [
-        250,
-        360
-      ]
+      "position": [0, 300],
+      "webhookId": "student-feedback"
     },
     {
       "parameters": {
@@ -25,72 +88,82 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
               "id": "v1",
-              "leftValue": "={{ $json.studentName }}",
+              "leftValue": "={{ $json.body.studentName }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "notEmpty"
+                "operation": "notEmpty",
+                "singleValue": true
               }
             },
             {
               "id": "v2",
-              "leftValue": "={{ $json.email }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.body.email }}",
+              "rightValue": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
               "operator": {
                 "type": "string",
-                "operation": "notEmpty"
+                "operation": "regex"
               }
             },
             {
               "id": "v3",
-              "leftValue": "={{ $json.courseName }}",
+              "leftValue": "={{ $json.body.courseName }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "notEmpty"
+                "operation": "notEmpty",
+                "singleValue": true
               }
             },
             {
               "id": "v4",
-              "leftValue": "={{ $json.rating }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.body.rating }}",
+              "rightValue": 1,
               "operator": {
-                "type": "string",
-                "operation": "notEmpty"
+                "type": "number",
+                "operation": "gte"
               }
             },
             {
               "id": "v5",
-              "leftValue": "={{ $json.message }}",
+              "leftValue": "={{ $json.body.rating }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "v6",
+              "leftValue": "={{ $json.body.message }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "notEmpty"
+                "operation": "notEmpty",
+                "singleValue": true
               }
             }
           ],
           "combinator": "and"
         },
+        "looseTypeValidation": true,
         "options": {}
       },
       "id": "validate-payload",
       "name": "Validate Input",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        470,
-        360
-      ]
+      "position": [240, 300]
     },
     {
       "parameters": {
-        "respondWith": "text",
-        "responseBody": "{\"status\": \"error\", \"message\": \"Validation failed: Missing required fields.\"}",
+        "respondWith": "json",
+        "responseBody": "{\"status\": \"error\", \"message\": \"Validation failed: missing or invalid fields.\"}",
         "options": {
           "responseCode": 400
         }
@@ -98,11 +171,8 @@
       "id": "error-response",
       "name": "Error Response (400)",
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [
-        680,
-        180
-      ]
+      "typeVersion": 1.1,
+      "position": [460, 140]
     },
     {
       "parameters": {
@@ -110,31 +180,29 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ $json.rating }}",
+              "leftValue": "={{ $json.body.rating }}",
               "rightValue": 2,
               "operator": {
                 "type": "number",
-                "operation": "lessOrEqual"
+                "operation": "lte"
               }
             }
           ],
           "combinator": "and"
         },
+        "looseTypeValidation": true,
         "options": {}
       },
       "id": "check-rating",
       "name": "Is Rating <= 2?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        680,
-        470
-      ]
+      "position": [460, 560]
     },
     {
       "parameters": {
@@ -152,10 +220,7 @@
       "name": "Tag: Needs Attention",
       "type": "n8n-nodes-base.set",
       "typeVersion": 1,
-      "position": [
-        900,
-        380
-      ]
+      "position": [680, 460]
     },
     {
       "parameters": {
@@ -173,21 +238,7 @@
       "name": "Tag: Satisfactory",
       "type": "n8n-nodes-base.set",
       "typeVersion": 1,
-      "position": [
-        900,
-        560
-      ]
-    },
-    {
-      "parameters": {},
-      "id": "merge-branches",
-      "name": "Merge Paths",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
-      "position": [
-        1120,
-        470
-      ]
+      "position": [680, 640]
     },
     {
       "parameters": {
@@ -205,15 +256,24 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "studentName": "={{ $json.studentName }}",
-            "email": "={{ $json.email }}",
-            "courseName": "={{ $json.courseName }}",
-            "rating": "={{ $json.rating }}",
+            "studentName": "={{ $json.body.studentName }}",
+            "email": "={{ $json.body.email }}",
+            "courseName": "={{ $json.body.courseName }}",
+            "rating": "={{ $json.body.rating }}",
             "status": "={{ $json.status }}",
-            "message": "={{ $json.message }}",
-            "submittedAt": "={{ $json.submittedAt }}"
+            "message": "={{ $json.body.message }}",
+            "submittedAt": "={{ $json.body.submittedAt }}"
           },
-          "matchingColumns": []
+          "matchingColumns": [],
+          "schema": [
+            { "id": "studentName", "displayName": "studentName", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "email", "displayName": "email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "courseName", "displayName": "courseName", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "rating", "displayName": "rating", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "message", "displayName": "message", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "submittedAt", "displayName": "submittedAt", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
         },
         "options": {}
       },
@@ -221,30 +281,27 @@
       "name": "Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.1,
-      "position": [
-        1300,
-        470
-      ]
+      "position": [920, 540]
     },
     {
       "parameters": {
-        "sendTo": "={{ $json.email }}",
+        "sendTo": "={{ $('Webhook Trigger').item.json.body.email }}",
         "subject": "Thank you for your feedback!",
-        "message": "Hi {{ $json.studentName }},\n\nThank you for sharing your experience in our course \"{{ $json.courseName }}\".\n\nWe have successfully received your feedback message:\n\"{{ $json.message }}\"\n\nWe recorded your rating of {{ $json.rating }}/5 stars. Feedback like yours helps us continuously improve our curriculum.\n\nBest regards,\nThe Training Team",
-        "options": {}
+        "emailType": "text",
+        "message": "=Hi {{ $('Webhook Trigger').item.json.body.studentName }},\n\nThank you for your feedback! Your response has been received successfully.\n\nCourse: {{ $('Webhook Trigger').item.json.body.courseName }}\nYour rating: {{ $('Webhook Trigger').item.json.body.rating }}/5\nYour message: \"{{ $('Webhook Trigger').item.json.body.message }}\"\n\nFeedback like yours helps us keep improving our courses.\n\nBest regards,\nThe Training Team",
+        "options": {
+          "appendAttribution": false
+        }
       },
       "id": "send-email",
       "name": "Send Thank You Email",
-      "type": "n8n-nodes-base.emailSend",
+      "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [
-        1500,
-        470
-      ]
+      "position": [1140, 540]
     },
     {
       "parameters": {
-        "respondWith": "text",
+        "respondWith": "json",
         "responseBody": "{\"status\": \"success\", \"message\": \"Feedback recorded and email notification sent.\"}",
         "options": {
           "responseCode": 200
@@ -253,113 +310,63 @@
       "id": "success-response",
       "name": "Success Response (200)",
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [
-        1700,
-        470
-      ]
+      "typeVersion": 1.1,
+      "position": [1360, 540]
     }
   ],
   "connections": {
     "Webhook Trigger": {
       "main": [
         [
-          {
-            "node": "Validate Input",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Validate Input", "type": "main", "index": 0 }
         ]
       ]
     },
     "Validate Input": {
       "main": [
         [
-          {
-            "node": "Is Rating <= 2?",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Is Rating <= 2?", "type": "main", "index": 0 }
         ],
         [
-          {
-            "node": "Error Response (400)",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Error Response (400)", "type": "main", "index": 0 }
         ]
       ]
     },
     "Is Rating <= 2?": {
       "main": [
         [
-          {
-            "node": "Tag: Needs Attention",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Tag: Needs Attention", "type": "main", "index": 0 }
         ],
         [
-          {
-            "node": "Tag: Satisfactory",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Tag: Satisfactory", "type": "main", "index": 0 }
         ]
       ]
     },
     "Tag: Needs Attention": {
       "main": [
         [
-          {
-            "node": "Merge Paths",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Google Sheets", "type": "main", "index": 0 }
         ]
       ]
     },
     "Tag: Satisfactory": {
       "main": [
         [
-          {
-            "node": "Merge Paths",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge Paths": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Google Sheets", "type": "main", "index": 0 }
         ]
       ]
     },
     "Google Sheets": {
       "main": [
         [
-          {
-            "node": "Send Thank You Email",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Send Thank You Email", "type": "main", "index": 0 }
         ]
       ]
     },
     "Send Thank You Email": {
       "main": [
         [
-          {
-            "node": "Success Response (200)",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Success Response (200)", "type": "main", "index": 0 }
         ]
       ]
     }
@@ -368,6 +375,5 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "f90df2fa-e16e-44db-b271-9c88461fbfd2",
-  "id": "feedback-workflow"
+  "pinData": {}
 }
